@@ -6,5 +6,7 @@
         <item name="windowSplashScreenAnimatedIcon">@drawable/nicagrow_logo</item>
         <item name="postSplashScreenTheme">@style/Theme.NicaGrowMovil_v2</item>
     </style>
-    <style name="Theme.NicaGrowMovil_v2" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.NicaGrowMovil_v2" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/celeste</item>
+    </style>
 </resources>

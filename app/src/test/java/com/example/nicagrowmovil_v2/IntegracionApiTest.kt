@@ -1,12 +1,11 @@
 package com.example.nicagrowmovil_v2
 
-import com.sun.net.httpserver.HttpServer
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
 import java.math.BigDecimal
-import java.net.InetSocketAddress
-import java.util.concurrent.atomic.AtomicReference
 
 class IntegracionApiTest {
     @Test
@@ -14,7 +13,7 @@ class IntegracionApiTest {
         val llamadas = mutableListOf<Int>()
         val datos = leerPaginas { pagina ->
             llamadas.add(pagina)
-            if (pagina == 1) Pagina(1, 2, 3, listOf(10, 20)) else Pagina(2, 2, 3, listOf(30))
+            if (pagina == 1) Pagina(3, "pagina=2", null, listOf(10, 20)) else Pagina(3, null, "pagina=1", listOf(30))
         }
         assertEquals(listOf(10, 20, 30), datos)
         assertEquals(listOf(1, 2), llamadas)
@@ -23,7 +22,7 @@ class IntegracionApiTest {
     @Test
     fun rechazaUnaPaginacionIncompleta() = runBlocking {
         try {
-            leerPaginas<Int> { Pagina(1, 2, 3, emptyList()) }
+            leerPaginas<Int> { Pagina(1, "pagina=2", null, emptyList()) }
             fail("No debe aceptar datos incompletos")
         } catch (_: IllegalStateException) { }
     }
@@ -32,13 +31,13 @@ class IntegracionApiTest {
     fun filtraPorAnioYCalculaPromediosConTodasLasResenas() {
         val datos = prepararDatosApi(
             listOf(ProductoApi(1, 61, "Café", "Alimentos"), ProductoApi(2, 62, "Cacao", "Alimentos")),
-            listOf(EnvioApi(1, "Entrega local")), listOf(TemporadaApi(1, "Navidad")),
-            listOf(TiempoApi(1, 2025), TiempoApi(2, 2026)),
-            listOf(BusquedaApi(1, 1, 3), BusquedaApi(2, 2, 7)),
-            listOf(IncidenteApi(1, 1, 1, 2), IncidenteApi(2, 2, 1, 3)),
-            listOf(TendenciaApi(1, 30, 10)),
-            listOf(ValoracionApi(1, 1, null, 5), ValoracionApi(1, 1, null, 5), ValoracionApi(1, 2, null, 1), ValoracionApi(2, 2, null, 5), ValoracionApi(1, null, 1, 4)),
-            ResumenVentas(1, 1, 1, BigDecimal("123.45")), emptyList(), 2025
+            listOf(EnvioApi(1, 1, "Entrega local")), listOf(TemporadaApi(1, 1, "Navidad")),
+            listOf(TiempoApi(1, "2025-01-01", 1, 1, 2025), TiempoApi(2, "2026-01-01", 1, 1, 2026)),
+            listOf(BusquedaApi(1, 1, 1, 3), BusquedaApi(2, 2, 2, 7)),
+            listOf(IncidenteApi(1, 1, 1, 1, 1, 2), IncidenteApi(2, 2, 2, 1, 1, 3)),
+            listOf(TendenciaApi(1, 1, 30, 10)),
+            listOf(ValoracionApi(1, 1, 1, null, 5), ValoracionApi(1, 1, 1, null, 5), ValoracionApi(1, 2, 1, null, 1), ValoracionApi(2, 2, 2, null, 5), ValoracionApi(1, 1, null, 1, 4)),
+            ResumenVentas(1, 1, BigDecimal("123.45")), emptyList(), 2025
         )
         assertEquals(1, datos.resumen.busquedas)
         assertEquals(2, datos.resumen.incidentes)
@@ -53,34 +52,29 @@ class IntegracionApiTest {
 
     @Test
     fun anioSinRegistrosNoInventaPromedios() {
-        val datos = prepararDatosApi(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), ResumenVentas(0, 0, 0, BigDecimal.ZERO), emptyList(), 2030)
+        val datos = prepararDatosApi(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), ResumenVentas(0, 0, BigDecimal.ZERO), emptyList(), 2030)
         assertNull(datos.resumen.promedioProductos)
         assertNull(datos.resumen.promedioServicios)
         assertTrue(datos.productos.isEmpty())
     }
 
     @Test
-    fun retrofitEnviaClaveYFechasYConservaLosDecimales() = runBlocking {
-        val cabecera = AtomicReference<String>()
-        val consulta = AtomicReference<String>()
-        val servidor = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        servidor.createContext("/api/reportes/resumen-ventas/") { intercambio ->
-            cabecera.set(intercambio.requestHeaders.getFirst("X-Api-Key"))
-            consulta.set(intercambio.requestURI.rawQuery)
-            val cuerpo = """[{"lineas_venta":144,"pedidos":72,"unidades":326,"importe_total":"178694.35"}]""".toByteArray()
-            intercambio.responseHeaders.add("Content-Type", "application/json")
-            intercambio.sendResponseHeaders(200, cuerpo.size.toLong())
-            intercambio.responseBody.use { it.write(cuerpo) }
-        }
+    fun retrofitEnviaClaveYConservaLosDecimales() = runBlocking {
+        val servidor = MockWebServer()
+        servidor.enqueue(
+            MockResponse()
+                .setHeader("Content-Type", "application/json")
+                .setBody("""{"reporte":"resumen-ventas","datos":[{"total_ventas":144,"unidades":326,"importe_total":"178694.35"}]}""")
+        )
         servidor.start()
         try {
-            val api = RetrofitClient.crear("http://127.0.0.1:${servidor.address.port}/")
-            val respuesta = api.resumenVentas("clave-ficticia-de-test", "2026-01-01", "2026-12-31").single()
-            assertEquals("clave-ficticia-de-test", cabecera.get())
-            assertTrue(consulta.get().contains("desde=2026-01-01"))
-            assertTrue(consulta.get().contains("hasta=2026-12-31"))
+            val api = RetrofitClient.crear(servidor.url("/").toString())
+            val respuesta = api.resumenVentas("clave-ficticia-de-test").datos.single()
+            val solicitud = servidor.takeRequest()
+            assertEquals("clave-ficticia-de-test", solicitud.getHeader("X-Api-Key"))
+            assertEquals("/api/reportes/resumen-ventas/", solicitud.path)
             assertEquals(BigDecimal("178694.35"), respuesta.importe_total)
-        } finally { servidor.stop(0) }
+        } finally { servidor.shutdown() }
     }
     @Test
     fun consultaLaApiLocalCuandoSeAutoriza() = runBlocking {
@@ -96,8 +90,8 @@ class IntegracionApiTest {
         val datos = cargarDatosApi(api, clave!!, null)
         val sumaMeses = datos.ventasMensuales.fold(BigDecimal.ZERO) { suma, mes -> suma.add(mes.importe_total) }
         assertEquals(0, sumaMeses.compareTo(datos.ventas.importe_total))
-        assertEquals(api.busquedas(clave, 1).total, datos.resumen.busquedas)
-        assertEquals(api.valoraciones(clave, 1).total, datos.resumen.valoracionesProductos + datos.resumen.valoracionesServicios)
+        assertEquals(api.busquedas(clave, 1).count, datos.resumen.busquedas)
+        assertEquals(api.valoraciones(clave, 1).count, datos.resumen.valoracionesProductos + datos.resumen.valoracionesServicios)
         assertTrue(datos.anios.contains(2026))
         val anio = cargarDatosApi(api, clave, 2026)
         assertTrue(anio.ventasMensuales.all { it.anio == 2026 })

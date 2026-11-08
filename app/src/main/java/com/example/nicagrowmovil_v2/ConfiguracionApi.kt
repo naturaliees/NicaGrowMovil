@@ -1,15 +1,14 @@
 package com.example.nicagrowmovil_v2
 
-import android.content.Context
-import org.json.JSONObject
-
 data class ConfiguracionApi(val clave: String)
 
-fun leerConfiguracionApi(contexto: Context): ConfiguracionApi {
-    val texto = contexto.openFileInput("conexion_api.json").bufferedReader().use { it.readText() }
-    val json = JSONObject(texto)
-    val clave = json.getString("clave")
-    check(clave.isNotBlank())
+class ConfiguracionApiException(mensaje: String) : IllegalStateException(mensaje)
+
+fun leerConfiguracionApi(): ConfiguracionApi {
+    val clave = BuildConfig.API_KEY.trim()
+    if (clave.isBlank() || clave == "PEGA_AQUI_TU_API_KEY") {
+        throw ConfiguracionApiException("No se incluyó una clave válida al compilar la aplicación.")
+    }
     return ConfiguracionApi(clave)
 }
 

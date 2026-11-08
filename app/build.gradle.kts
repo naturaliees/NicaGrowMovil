@@ -3,6 +3,18 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val archivoClaveApi = file("conexion_api.json")
+val claveApi = if (archivoClaveApi.exists()) {
+    Regex("\\\"clave\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"")
+        .find(archivoClaveApi.readText())
+        ?.groupValues
+        ?.get(1)
+        .orEmpty()
+} else {
+    ""
+}
+val claveApiEscapada = claveApi.replace("\\", "\\\\").replace("\"", "\\\"")
+
 android {
     namespace = "com.example.nicagrowmovil_v2"
     compileSdk {
@@ -17,6 +29,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "API_KEY", "\"$claveApiEscapada\"")
     }
 
     buildTypes {
@@ -39,6 +52,7 @@ android {
 dependencies {
     implementation("com.squareup.retrofit2:retrofit:3.0.0")
     implementation("com.squareup.retrofit2:converter-gson:3.0.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -50,6 +64,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation("androidx.core:core-splashscreen:1.2.0")
     testImplementation(libs.junit)
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)

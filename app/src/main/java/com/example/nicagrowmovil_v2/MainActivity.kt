@@ -11,11 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
@@ -35,7 +32,6 @@ class MainActivity : ComponentActivity() {
 fun AplicacionNicaGrow() {
     var pantalla by remember { mutableStateOf("login") }
     var autenticado by remember { mutableStateOf(false) }
-    val contexto = LocalContext.current.applicationContext
     var anio by remember { mutableStateOf<Int?>(null) }
     var anios by remember { mutableStateOf<List<Int>>(emptyList()) }
     var datos by remember { mutableStateOf<DatosNicaGrow?>(null) }
@@ -59,7 +55,7 @@ fun AplicacionNicaGrow() {
         error = ""
         datos = null
         try {
-            val configuracion = withContext(Dispatchers.IO) { leerConfiguracionApi(contexto) }
+            val configuracion = leerConfiguracionApi()
             val informacion = cargarDatosApi(RetrofitClient.api, configuracion.clave, anio)
             datos = informacion
             anios = informacion.anios
@@ -72,7 +68,8 @@ fun AplicacionNicaGrow() {
         }
     }
     BackHandler(enabled = pantalla != "login") {
-        if (pantalla == "inicio") salir() else pantalla = "inicio"
+        if (pantalla == "inicio") salir()
+        else pantalla = "inicio"
     }
     NicaGrowMovil_v2Theme {
         Surface(Modifier.fillMaxSize(), color = FondoNicaGrow) {
@@ -141,6 +138,7 @@ fun FiltroPeriodo(anio: Int?, anios: List<Int>, cargando: Boolean, onCambiar: (I
 
 fun mensajeApi(ex: Exception): String {
     return when (ex) {
+        is ConfiguracionApiException -> ex.message ?: "No se configuró la conexión privada a la API."
         is HttpException -> when (ex.code()) {
             400 -> "No se pudo consultar ese período."
             401 -> "No se pudo acceder a los datos. Intentá nuevamente más tarde."

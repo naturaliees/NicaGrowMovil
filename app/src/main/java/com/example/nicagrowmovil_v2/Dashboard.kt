@@ -57,7 +57,7 @@ fun PantallaDashboard(
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Text("Ventas del período", style = MaterialTheme.typography.titleMedium)
                 Text(mostrarDinero(datos.ventas.importe_total), style = MaterialTheme.typography.headlineSmall, color = AzulNicaGrow)
-                Text("${datos.ventas.pedidos} pedidos · ${datos.ventas.unidades} unidades")
+                Text("${datos.ventas.total_ventas} ventas registradas · ${datos.ventas.unidades} unidades")
             }
         }
         GraficoVentasMensuales(datos.ventasMensuales)

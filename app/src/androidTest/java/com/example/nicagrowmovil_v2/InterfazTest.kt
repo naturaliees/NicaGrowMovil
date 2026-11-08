@@ -18,8 +18,8 @@ class InterfazTest {
         compose.setContent { MaterialTheme { PantallaLogin { ingresos++ } } }
         compose.onNodeWithText("Dirección de la API").assertDoesNotExist()
         compose.onNodeWithText("Clave de acceso a la API").assertDoesNotExist()
-        compose.onNodeWithText("Usuario").performTextInput("admin")
-        compose.onNodeWithText("Contraseña").performTextInput("1234")
+        compose.onNodeWithText("Usuario").performTextInput("NicaGrowADM")
+        compose.onNodeWithText("Contraseña").performTextInput("12345678")
         compose.onNodeWithText("Iniciar sesión").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(1, ingresos) }
     }
@@ -62,7 +62,7 @@ class InterfazTest {
     }
 
     @Test fun detalleMensualEstaOcultoInicialmente() {
-        val ventas = listOf(VentaMensual(2026, 1, 1, 1, BigDecimal("123.45")))
+        val ventas = listOf(VentaMensual(2026, 1, 1, BigDecimal("123.45")))
         compose.setContent { MaterialTheme { GraficoVentasMensuales(ventas) } }
         val texto = "2026-01: ${mostrarDinero(BigDecimal("123.45"))}"
         compose.onNodeWithText(texto).assertDoesNotExist()
