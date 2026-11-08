@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.NicaGrowSplashScreen" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/celeste</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/nicagrow_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.NicaGrowMovil_v2</item>
+    </style>
+    <style name="Theme.NicaGrowMovil_v2" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
