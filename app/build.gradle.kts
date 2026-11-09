@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val archivoClaveApi = file("conexion_api.json")
+val archivoClaveApi = rootProject.file("conexion_api.json")
 val claveApi = if (archivoClaveApi.exists()) {
     Regex("\\\"clave\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"")
         .find(archivoClaveApi.readText())
